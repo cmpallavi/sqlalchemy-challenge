@@ -37,7 +37,7 @@ app = Flask(__name__)
 def homepage():
     """List all the available routes."""
     return (
-        f"Available Routes for Hawaii Weather Data:<br/><br>"
+        f"Available API Routes for Hawaii Weather Data:<br/><br>"
         f" * Precipitation records for last 12 months: <a href=\"/api/v1.0/precipitation\">/api/v1.0/precipitation<a><br/>"
         f" * Weather Stations: <a href=\"/api/v1.0/stations\">/api/v1.0/stations<a><br/>"
         f" * Daily Temperature Observations for Most Active Station for Last Year: <a href=\"/api/v1.0/tobs\">/api/v1.0/tobs<a><br/>"
@@ -75,6 +75,7 @@ def precipitation():
         data_dict["date"] = date
         data_dict["prcp"] = prcp
         data.append(data_dict)
+        
     session.close()
     return jsonify(data)
 
@@ -106,6 +107,7 @@ def tobs():
     most_recent_date = session.query(Measurement.date).\
         filter(Measurement.station == most_active_station_id).\
         order_by(Measurement.date.desc()).first()
+    
     most_recent_date_dt = datetime.strptime(most_recent_date.date, '%Y-%m-%d').date()
     year_ago = most_recent_date_dt - dt.timedelta(days=365)
     year_ago
