@@ -38,10 +38,12 @@ def homepage():
     """List all the available routes."""
     return (
         f"Available Routes for Hawaii Weather Data:<br/><br>"
-        f" * Precipitation records for last 12 months: <a href=\"/api/v1/precipitation\">/api/v1/precipitation<a><br/>"
-        f" * Weather Stations: <a href=\"/api/v1/stations\">/api/v1/stations<a><br/>"
-        f" * Daily Temperature Observations for Most Active Station for Last Year: <a href=\"/api/v1/tobs\">/api/v1/tobs<a><br/>"
-        f" * Min, Average & Max Temperatures for Date Range: /api/v1/trip/yyyy-mm-dd/yyyy-mm-dd<br>"
+        f" * Precipitation records for last 12 months: <a href=\"/api/v1.0/precipitation\">/api/v1.0/precipitation<a><br/>"
+        f" * Weather Stations: <a href=\"/api/v1.0/stations\">/api/v1.0/stations<a><br/>"
+        f" * Daily Temperature Observations for Most Active Station for Last Year: <a href=\"/api/v1.0/tobs\">/api/v1.0/tobs<a><br/>"
+        f" * Min, Average & Max Temperatures for Date Range: /api/v1.0/<start><br>"
+        f" * Min, Average & Max Temperatures for Date Range: /api/v1.0/<start>/<end><br>"
+        f"Note: to access values between a start and end date enter both dates using format: YYYY-mm-dd/YYYY-mm-dd"
     )
 
 
@@ -50,7 +52,7 @@ def homepage():
 # Flask Routes
 #################################################
 
-@app.route("/api/v1/precipitation")
+@app.route("/api/v1.0/precipitation")
 def precipitation():
     # Create our session (link) from Python to the DB
     session = Session(engine)
@@ -76,7 +78,7 @@ def precipitation():
     session.close()
     return jsonify(data)
 
-@app.route("/api/v1/stations")
+@app.route("/api/v1.0/stations")
 def stations():
     session = Session(engine)
     active_stations = session.query(Station.station, Station.name).\
@@ -92,13 +94,37 @@ def stations():
     session.close()
     return jsonify(stations)
 
-@app.route("/api/v1/tobs")
+@app.route("/api/v1.0/tobs")
 def tobs():    
     session = Session(engine)
-
+    active_stations = session.query(Measurement.station, func.count(Measurement.station)).\
+        order_by(func.count(Measurement.station).desc()).\
+        group_by(Measurement.station).all()
+    most_active_station = active_stations[0]
+    most_active_station_id = most_active_station[0]
+    
+    most_recent_date = session.query(Measurement.date).\
+        filter(Measurement.station == most_active_station_id).\
+        order_by(Measurement.date.desc()).first()
+    most_recent_date_dt = datetime.strptime(most_recent_date.date, '%Y-%m-%d').date()
+    year_ago = most_recent_date_dt - dt.timedelta(days=365)
+    year_ago
+    
+    values = session.query(Measurement.date, Measurement.tobs).\
+        filter(Measurement.station == most_active_station_id).\
+        filter(Measurement.date >= year_ago).\
+        all()
+    data = []
+    for date, tobs in values:
+        data_dict = {}
+        data_dict["date"] = date
+        data_dict["tobs"] = tobs
+        data.append(data_dict)
     session.close()
+    return jsonify(data)
 
-# @app.route("/api/v1/trip)
+
+# @app.route("/api/v1.0/trip)
 # def trip1(start_date, end_date='2017-08-23'):
 
 
